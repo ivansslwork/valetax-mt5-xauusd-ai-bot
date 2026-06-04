@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#1f2733" />
+<title>MetaEditor 5 — Android</title>
+<!--
+  MetaEditor 5 (Android UI) — single-file app
+  UI: English | Comments: Bahasa Indonesia
+  Catatan: kompilasi MQL5 di sini DISIMULASIKAN (validasi sintaks dasar + output).
+  Kompilasi .mq5 yang sesungguhnya hanya bisa lewat MetaEditor resmi (Windows).
+-->
+<style>
+  :root{
+    /* Palet warna meniru MetaEditor 5 (tema gelap) */
+    --bg:#11161d;
+    --panel:#1b232e;
+    --panel2:#222c39;
+    --panel3:#2a3543;
+    --line:#33414f;
+    --txt:#d7dee7;
+    --txt-dim:#8b97a6;
+    --accent:#3b82f6;
+    --accent-2:#2563eb;
+    --green:#22c55e;
+    --red:#ef4444;
+    --amber:#f59e0b;
+    --kw:#569cd6;     /* keyword */
+    --type:#4ec9b0;   /* type */
+    --str:#ce9178;    /* string */
+    --num:#b5cea8;    /* number */
+    --com:#6a9955;    /* comment */
+    --pre:#c586c0;    /* preprocessor */
+    --fn:#dcdcaa;     /* function */
+    --topbar-h:52px;
+    --tabbar-h:40px;
+    --statusbar-h:26px;
+    --bottomnav-h:56px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;margin:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);color:var(--txt);
+    overflow:hidden;display:flex;flex-direction:column;
+    height:100dvh;
+    -webkit-user-select:none;user-select:none;
+  }
+
+  /* ===================== TOP BAR ===================== */
+  .topbar{
+    height:var(--topbar-h);min-height:var(--topbar-h);
+    background:linear-gradient(180deg,#27313f,#1d2530);
+    border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:6px;padding:0 8px;
+    padding-top:env(safe-area-inset-top);
+  }
+  .icon-btn{
+    width:38px;height:38px;border:none;background:transparent;color:var(--txt);
+    border-radius:8px;display:flex;align-items:center;justify-content:center;
+    font-size:20px;cursor:pointer;flex:0 0 auto;
+  }
+  .icon-btn:active{background:var(--panel3);}
+  .brand{display:flex;align-items:center;gap:8px;flex:1 1 auto;min-width:0;}
+  .brand .logo{
+    width:30px;height:30px;border-radius:7px;flex:0 0 auto;
+    background:linear-gradient(135deg,#3b82f6,#1d4ed8);
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:#fff;
+    box-shadow:0 1px 4px rgba(0,0,0,.4);
+  }
+  .brand .title{display:flex;flex-direction:column;min-width:0;}
+  .brand .title b{font-size:14px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .brand .title span{font-size:10px;color:var(--txt-dim);}
+  .top-actions{display:flex;gap:2px;align-items:center;}
+
+  /* ===================== TABS ===================== */
+  .tabbar{
+    height:var(--tabbar-h);min-height:var(--tabbar-h);
+    background:var(--panel);border-bottom:1px solid var(--line);
+    display:flex;align-items:stretch;overflow-x:auto;scrollbar-width:none;
+  }
+  .tabbar::-webkit-scrollbar{display:none;}
+  .tab{
+    display:flex;align-items:center;gap:6px;padding:0 12px;border-right:1px solid var(--line);
+    color:var(--txt-dim);font-size:12.5px;white-space:nowrap;cursor:pointer;position:relative;
+  }
+  .tab.active{color:var(--txt);background:var(--bg);}
+  .tab.active::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--accent);}
+  .tab .dot{width:6px;height:6px;border-radius:50%;background:var(--amber);display:none;}
+  .tab.modified .dot{display:inline-block;}
+  .tab .x{font-size:14px;color:var(--txt-dim);padding:2px;}
+  .tab .x:active{color:var(--red);}
+
+  /* ===================== EDITOR ===================== */
+  .editor-wrap{flex:1 1 auto;position:relative;overflow:hidden;display:flex;flex-direction:column;}
+  .code-area{
+    flex:1 1 auto;display:flex;overflow:auto;position:relative;
+    font-family:"SF Mono",ui-monospace,"Roboto Mono",Consolas,Menlo,monospace;
+    font-size:13px;line-height:1.5;-webkit-user-select:text;user-select:text;
+  }
+  .gutter{
+    flex:0 0 auto;padding:8px 8px 80px;text-align:right;color:#5b6878;background:var(--panel);
+    border-right:1px solid var(--line);min-width:42px;user-select:none;
+  }
+  .gutter div{height:1.5em;}
+  .code-host{flex:1 1 auto;position:relative;min-width:0;}
+  /* highlight layer + textarea ditumpuk presisi */
+  .highlight,.input{
+    margin:0;padding:8px 10px 80px;white-space:pre;font:inherit;line-height:1.5;tab-size:4;
+    border:0;outline:none;width:max-content;min-width:100%;
+  }
+  .highlight{position:absolute;inset:0;pointer-events:none;color:var(--txt);overflow:visible;}
+  .input{
+    position:relative;background:transparent;color:transparent;caret-color:#fff;resize:none;
+    display:block;min-height:100%;
+  }
+  .input::selection{background:rgba(59,130,246,.35);}
+  /* token colors */
+  .t-kw{color:var(--kw);} .t-type{color:var(--type);} .t-str{color:var(--str);}
+  .t-num{color:var(--num);} .t-com{color:var(--com);font-style:italic;}
+  .t-pre{color:var(--pre);} .t-fn{color:var(--fn);}
+
+  /* ===================== TOOLBOX (compile output) ===================== */
+  .toolbox{
+    flex:0 0 auto;height:0;overflow:hidden;background:var(--panel);border-top:2px solid var(--line);
+    transition:height .2s ease;display:flex;flex-direction:column;
+  }
+  .toolbox.open{height:38vh;}
+  .toolbox-head{
+    display:flex;align-items:center;gap:4px;padding:4px 8px;border-bottom:1px solid var(--line);
+    background:var(--panel2);font-size:12px;
+  }
+  .toolbox-head .tb{padding:4px 10px;border-radius:6px;color:var(--txt-dim);cursor:pointer;}
+  .toolbox-head .tb.active{background:var(--bg);color:var(--txt);}
+  .toolbox-head .spacer{flex:1;}
+  .toolbox-body{flex:1;overflow:auto;padding:6px 8px;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;}
+  .log-line{display:flex;gap:8px;padding:2px 0;border-bottom:1px solid rgba(255,255,255,.03);}
+  .log-line .sev{flex:0 0 auto;width:60px;}
+  .sev-err{color:var(--red);} .sev-warn{color:var(--amber);} .sev-info{color:var(--txt-dim);} .sev-ok{color:var(--green);}
+
+  /* ===================== STATUS BAR ===================== */
+  .statusbar{
+    height:var(--statusbar-h);min-height:var(--statusbar-h);
+    background:var(--accent-2);color:#fff;font-size:11px;
+    display:flex;align-items:center;gap:14px;padding:0 12px;
+  }
+  .statusbar .s{opacity:.95;}
+  .statusbar .grow{flex:1;}
+
+  /* ===================== BOTTOM NAV ===================== */
+  .bottomnav{
+    height:var(--bottomnav-h);min-height:var(--bottomnav-h);
+    background:var(--panel);border-top:1px solid var(--line);
+    display:flex;align-items:stretch;padding-bottom:env(safe-area-inset-bottom);
+  }
+  .nav-btn{
+    flex:1;border:none;background:transparent;color:var(--txt-dim);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+    font-size:10px;cursor:pointer;
+  }
+  .nav-btn .ic{font-size:18px;}
+  .nav-btn.primary{color:#fff;}
+  .nav-btn.primary .ic{
+    background:linear-gradient(135deg,var(--green),#16a34a);width:42px;height:42px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;margin-top:-14px;box-shadow:0 3px 8px rgba(0,0,0,.4);
+  }
+  .nav-btn:active{background:var(--panel2);}
+
+  /* ===================== DRAWER / SIDE MENU ===================== */
+  .scrim{position:fixed;inset:0;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .2s;z-index:40;}
+  .scrim.show{opacity:1;pointer-events:auto;}
+  .drawer{
+    position:fixed;top:0;left:0;bottom:0;width:80%;max-width:320px;z-index:50;
+    background:var(--panel);border-right:1px solid var(--line);transform:translateX(-100%);
+    transition:transform .22s ease;display:flex;flex-direction:column;
+    padding-top:env(safe-area-inset-top);
+  }
+  .drawer.show{transform:translateX(0);}
+  .drawer-head{padding:18px 16px;background:linear-gradient(135deg,#1d4ed8,#1e293b);}
+  .drawer-head b{font-size:16px;}
+  .drawer-head div{font-size:11px;color:#cbd5e1;margin-top:4px;}
+  .menu-group{padding:6px 0;border-bottom:1px solid var(--line);}
+  .menu-group .gh{font-size:10px;text-transform:uppercase;color:var(--txt-dim);padding:8px 16px 4px;letter-spacing:.5px;}
+  .menu-item{display:flex;align-items:center;gap:12px;padding:11px 16px;font-size:14px;cursor:pointer;}
+  .menu-item:active{background:var(--panel2);}
+  .menu-item .ic{width:22px;text-align:center;font-size:16px;color:var(--accent);}
+  .menu-item .chev{margin-left:auto;color:var(--txt-dim);}
+
+  /* ===================== MODAL / DIALOGS ===================== */
+  .modal-scrim{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:60;padding:16px;}
+  .modal-scrim.show{display:flex;}
+  .modal{
+    width:100%;max-width:520px;max-height:86vh;background:var(--panel);border:1px solid var(--line);
+    border-radius:14px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.6);
+  }
+  .modal-head{display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--panel2);}
+  .modal-head b{flex:1;font-size:15px;}
+  .modal-body{padding:8px 0;overflow:auto;-webkit-user-select:auto;user-select:auto;}
+  .modal-foot{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--line);justify-content:flex-end;}
+
+  /* Options dialog (Tools > Options) */
+  .opt-tabs{display:flex;gap:4px;padding:8px 12px;border-bottom:1px solid var(--line);overflow-x:auto;}
+  .opt-tab{padding:7px 12px;border-radius:8px;font-size:12px;color:var(--txt-dim);white-space:nowrap;cursor:pointer;}
+  .opt-tab.active{background:var(--accent);color:#fff;}
+  .opt-pane{display:none;padding:8px 16px 16px;}
+  .opt-pane.active{display:block;}
+  .opt-section-title{font-size:13px;font-weight:700;color:var(--txt);margin:12px 0 6px;}
+  .opt-row{
+    display:flex;align-items:flex-start;gap:12px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.05);
+  }
+  .opt-row .meta{flex:1;min-width:0;}
+  .opt-row .meta b{display:block;font-size:13.5px;font-weight:500;}
+  .opt-row .meta small{display:block;color:var(--txt-dim);font-size:11px;margin-top:3px;line-height:1.4;}
+
+  /* iOS-style switch */
+  .switch{position:relative;width:46px;height:27px;flex:0 0 auto;cursor:pointer;}
+  .switch input{display:none;}
+  .switch .track{position:absolute;inset:0;background:#3a4756;border-radius:20px;transition:background .2s;}
+  .switch .thumb{position:absolute;top:3px;left:3px;width:21px;height:21px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.4);}
+  .switch input:checked + .track{background:var(--green);}
+  .switch input:checked + .track + .thumb{transform:translateX(19px);}
+
+  .btn{
+    padding:9px 16px;border-radius:9px;border:1px solid var(--line);background:var(--panel3);color:var(--txt);
+    font-size:13px;cursor:pointer;font-weight:500;
+  }
+  .btn:active{filter:brightness(1.15);}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .btn.ghost{background:transparent;}
+
+  /* WebRequest URL list editor */
+  .url-list{margin:8px 0;border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+  .url-item{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line);font-size:12.5px;}
+  .url-item:last-child{border-bottom:none;}
+  .url-item .u{flex:1;color:var(--type);word-break:break-all;}
+  .url-item .del{color:var(--red);cursor:pointer;padding:4px;}
+  .url-add{display:flex;gap:8px;margin-top:8px;}
+  .url-add input{
+    flex:1;padding:9px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--txt);font-size:12.5px;
+  }
+  .url-add input:focus{outline:none;border-color:var(--accent);}
+  .empty{padding:14px;text-align:center;color:var(--txt-dim);font-size:12px;}
+
+  /* File list (New/Open) */
+  .file-item{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid var(--line);cursor:pointer;}
+  .file-item:active{background:var(--panel2);}
+  .file-item .ic{width:26px;text-align:center;font-size:18px;}
+  .file-item .nm{flex:1;}
+  .file-item .nm b{font-size:13.5px;display:block;}
+  .file-item .nm small{color:var(--txt-dim);font-size:11px;}
+
+  /* Toast */
+  .toast{
+    position:fixed;left:50%;bottom:84px;transform:translateX(-50%) translateY(20px);
+    background:#0b0f14;border:1px solid var(--line);color:var(--txt);padding:10px 16px;border-radius:10px;
+    font-size:12.5px;opacity:0;pointer-events:none;transition:all .25s;z-index:80;max-width:90%;text-align:center;
+    box-shadow:0 6px 20px rgba(0,0,0,.5);
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  /* find bar */
+  .findbar{display:none;gap:6px;align-items:center;padding:6px 8px;background:var(--panel2);border-bottom:1px solid var(--line);}
+  .findbar.show{display:flex;}
+  .findbar input{flex:1;padding:7px 10px;border-radius:7px;border:1px solid var(--line);background:var(--bg);color:var(--txt);font-size:12.5px;}
+  .findbar input:focus{outline:none;border-color:var(--accent);}
+
+  .badge{font-size:9.5px;padding:1px 6px;border-radius:10px;background:var(--panel3);color:var(--txt-dim);}
+  .kbd-toolbar{display:flex;gap:4px;overflow-x:auto;padding:5px 6px;background:var(--panel2);border-top:1px solid var(--line);scrollbar-width:none;}
+  .kbd-toolbar::-webkit-scrollbar{display:none;}
+  .kbd-toolbar button{
+    flex:0 0 auto;min-width:34px;height:30px;border:1px solid var(--line);background:var(--panel3);color:var(--txt);
+    border-radius:6px;font-family:ui-monospace,monospace;font-size:13px;cursor:pointer;
+  }
+  .kbd-toolbar button:active{background:var(--accent);}
+</style>
+</head>
+<body>
+
+<!-- ===================== TOP BAR ===================== -->
+<header class="topbar">
+  <button class="icon-btn" id="btnMenu" title="Menu">&#9776;</button>
+  <div class="brand">
+    <div class="logo">M5</div>
+    <div class="title">
+      <b>MetaEditor 5</b>
+      <span id="subTitle">Android Edition</span>
+    </div>
+  </div>
+  <div class="top-actions">
+    <button class="icon-btn" id="btnFind" title="Find">&#128269;</button>
+    <button class="icon-btn" id="btnSave" title="Save">&#128190;</button>
+    <button class="icon-btn" id="btnOverflow" title="More">&#8942;</button>
+  </div>
+</header>
+
+<!-- ===================== TABS ===================== -->
+<nav class="tabbar" id="tabbar"></nav>
+
+<!-- find bar -->
+<div class="findbar" id="findbar">
+  <input id="findInput" placeholder="Find in code…" />
+  <button class="btn ghost" id="findClose">Close</button>
+</div>
+
+<!-- ===================== EDITOR ===================== -->
+<main class="editor-wrap">
+  <div class="code-area" id="codeArea">
+    <div class="gutter" id="gutter"></div>
+    <div class="code-host">
+      <pre class="highlight" id="highlight"></pre>
+      <textarea class="input" id="input" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off"></textarea>
+    </div>
+  </div>
+
+  <!-- mobile coding keys -->
+  <div class="kbd-toolbar" id="kbdToolbar"></div>
+
+  <!-- Toolbox: compile log -->
+  <section class="toolbox" id="toolbox">
+    <div class="toolbox-head">
+      <div class="tb active">Errors</div>
+      <div class="spacer"></div>
+      <button class="icon-btn" id="clearLog" title="Clear" style="width:30px;height:30px;font-size:15px;">&#128465;</button>
+      <button class="icon-btn" id="closeToolbox" title="Hide" style="width:30px;height:30px;font-size:16px;">&#9660;</button>
+    </div>
+    <div class="toolbox-body" id="toolboxBody"></div>
+  </section>
+</main>
+
+<!-- ===================== STATUS BAR ===================== -->
+<div class="statusbar">
+  <span class="s" id="stPos">Ln 1, Col 1</span>
+  <span class="s" id="stLang">MQL5</span>
+  <span class="grow"></span>
+  <span class="s" id="stEnc">UTF-8</span>
+  <span class="s" id="stStat">Ready</span>
+</div>
+
+<!-- ===================== BOTTOM NAV ===================== -->
+<nav class="bottomnav">
+  <button class="nav-btn" id="navNew"><span class="ic">&#128196;</span>New</button>
+  <button class="nav-btn" id="navOpen"><span class="ic">&#128193;</span>Open</button>
+  <button class="nav-btn primary" id="navCompile"><span class="ic">&#9881;</span>Compile</button>
+  <button class="nav-btn" id="navCheck"><span class="ic">&#10003;</span>Check</button>
+  <button class="nav-btn" id="navOptions"><span class="ic">&#9776;</span>Options</button>
+</nav>
+
+<!-- ===================== DRAWER ===================== -->
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer">
+  <div class="drawer-head">
+    <b>MetaEditor 5</b>
+    <div>MQL5 IDE • Android UI • build 4280</div>
+  </div>
+  <div style="overflow:auto;flex:1;">
+    <div class="menu-group">
+      <div class="gh">File</div>
+      <div class="menu-item" data-act="new"><span class="ic">&#128196;</span>New<span class="chev">›</span></div>
+      <div class="menu-item" data-act="open"><span class="ic">&#128193;</span>Open<span class="chev">›</span></div>
+      <div class="menu-item" data-act="save"><span class="ic">&#128190;</span>Save</div>
+    </div>
+    <div class="menu-group">
+      <div class="gh">Compile</div>
+      <div class="menu-item" data-act="compile"><span class="ic">&#9881;</span>Compile<span class="badge">F7</span></div>
+      <div class="menu-item" data-act="check"><span class="ic">&#10003;</span>Check Syntax</div>
+    </div>
+    <div class="menu-group">
+      <div class="gh">Tools</div>
+      <!-- Tools > Options > Expert Advisors -->
+      <div class="menu-item" data-act="options"><span class="ic">&#9881;</span>Options<span class="chev">›</span></div>
+      <div class="menu-item" data-act="ea-options"><span class="ic">&#129302;</span>Options › Expert Advisors<span class="chev">›</span></div>
+    </div>
+    <div class="menu-group">
+      <div class="gh">Help</div>
+      <div class="menu-item" data-act="about"><span class="ic">&#8505;</span>About</div>
+    </div>
+  </div>
+</aside>
+
+<!-- ===================== OPTIONS MODAL (Tools > Options) ===================== -->
+<div class="modal-scrim" id="optScrim">
+  <div class="modal">
+    <div class="modal-head">
+      <b>Options</b>
+      <button class="icon-btn" id="optClose" style="font-size:18px;">&times;</button>
+    </div>
+    <div class="opt-tabs" id="optTabs">
+      <div class="opt-tab" data-pane="general">General</div>
+      <div class="opt-tab" data-pane="editor">Editor</div>
+      <div class="opt-tab" data-pane="compiler">Compiler</div>
+      <div class="opt-tab active" data-pane="ea">Expert Advisors</div>
+    </div>
+    <div class="modal-body">
+
+      <!-- General -->
+      <div class="opt-pane" data-pane="general">
+        <div class="opt-section-title">General</div>
+        <div class="opt-row">
+          <div class="meta"><b>Dark theme</b><small>Use the dark color scheme for the editor.</small></div>
+          <label class="switch"><input type="checkbox" id="optDark" checked><span class="track"></span><span class="thumb"></span></label>
+        </div>
+        <div class="opt-row">
+          <div class="meta"><b>Open last files on start</b><small>Restore previously opened documents at launch.</small></div>
+          <label class="switch"><input type="checkbox" id="optRestore" checked><span class="track"></span><span class="thumb"></span></label>
+        </div>
+      </div>
+
+      <!-- Editor -->
+      <div class="opt-pane" data-pane="editor">
+        <div class="opt-section-title">Editor</div>
+        <div class="opt-row">
+          <div class="meta"><b>Show line numbers</b><small>Display the line-number gutter.</small></div>
+          <label class="switch"><input type="checkbox" id="optGutter" checked><span class="track"></span><span class="thumb"></span></label>
+        </div>
+        <div class="opt-row">
+          <div class="meta"><b>Auto-indent</b><small>Keep indentation of the previous line.</small></div>
+          <label class="switch"><input type="checkbox" id="optIndent" checked><span class="track"></span><span class="thumb"></span></label>
+        </div>
+        <div class="opt-row">
+          <div class="meta"><b>Highlight syntax</b><small>Color MQL5 keywords, types and strings.</small></div>
+          <label class="switch"><input type="checkbox" id="optHl" checked><span class="track"></span><span class="thumb"></span></label>
+        </div>
+      </div>
+
+      <!-- Compiler -->
+      <div class="opt-pane" data-pane="compiler">
+        <div class="opt-section-title">Compiler</div>
+        <div class="opt-row">
+          <div class="meta"><b>Optimize (O2)</b><small>Enable compiler optimizations for release builds.</small></div>
+          <label class="switch"><input type="checkbox" id="optOptim" checked><span class="track"></span><span class="thumb"></span></label>
+        </div>
+        <div class="opt-row">
+          <div class="meta"><b>Treat warnings as errors</b><small>Fail compilation if any warning is produced.</small></div>
+          <label class="switch"><input type="checkbox" id="optWarnErr"><span class="track"></span><span class="thumb"></span></label>
+        </div>
+        <div class="opt-row">
+          <div class="meta"><b>Generate debug info</b><small>Include debugging symbols in the .ex5 output.</small></div>
+          <label class="switch"><input type="checkbox" id="optDebug"><span class="track"></span><span class="thumb"></span></label>
+        </div>
+      </div>
+
+      <!-- Expert Advisors (utama yang diminta) -->
+      <div class="opt-pane active" data-pane="ea">
+        <div class="opt-section-title">Expert Advisors</div>
+
+        <div class="opt-row">
+          <div class="meta">
+            <b>Allow algorithmic trading</b>
+            <small>Allow Expert Advisors / scripts to send trade requests automatically.</small>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="eaAlgo"><span class="track"></span><span class="thumb"></span>
+          </label>
+        </div>
+
+        <div class="opt-row">
+          <div class="meta">
+            <b>Disable algorithmic trading when the account is changed</b>
+            <small>Automatically stop auto-trading after switching the trading account.</small>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="eaDisableOnAccount" checked><span class="track"></span><span class="thumb"></span>
+          </label>
+        </div>
+
+        <div class="opt-row">
+          <div class="meta">
+            <b>Disable algorithmic trading when the profile is changed</b>
+            <small>Stop auto-trading when a different chart profile is loaded.</small>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="eaDisableOnProfile" checked><span class="track"></span><span class="thumb"></span>
+          </label>
+        </div>
+
+        <div class="opt-row">
+          <div class="meta">
+            <b>Disable algorithmic trading when the charts symbol or period is changed</b>
+            <small>Stop the EA if the chart symbol or timeframe changes.</small>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="eaDisableOnSymbol"><span class="track"></span><span class="thumb"></span>
+          </label>
+        </div>
+
+        <div class="opt-row">
+          <div class="meta">
+            <b>Allow DLL imports</b>
+            <small>Permit Expert Advisors to import functions from external DLLs (potentially unsafe).</small>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="eaDll"><span class="track"></span><span class="thumb"></span>
+          </label>
+        </div>
+
+        <div class="opt-section-title" style="margin-top:18px;">Network</div>
+        <div class="opt-row">
+          <div class="meta">
+            <b>Allow WebRequest for listed URL</b>
+            <small>Expert Advisors may call WebRequest() only for the addresses below.</small>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="eaWebReq"><span class="track"></span><span class="thumb"></span>
+          </label>
+        </div>
+
+        <div id="urlSection" style="opacity:.45;pointer-events:none;transition:opacity .2s;">
+          <div class="url-list" id="urlList"></div>
+          <div class="url-add">
+            <input id="urlInput" placeholder="https://your-server.com" />
+            <button class="btn primary" id="urlAdd">Add</button>
+          </div>
+          <small style="color:var(--txt-dim);display:block;margin-top:6px;line-height:1.5;">
+            Add the host that your EA contacts. Each entry should be the base URL, e.g.
+            <span style="color:var(--type)">https://api.example.com</span>.
+          </small>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" id="optCancel">Cancel</button>
+      <button class="btn primary" id="optOk">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== NEW FILE MODAL ===================== -->
+<div class="modal-scrim" id="newScrim">
+  <div class="modal">
+    <div class="modal-head"><b>New File</b><button class="icon-btn" id="newClose" style="font-size:18px;">&times;</button></div>
+    <div class="modal-body" id="newList"></div>
+  </div>
+</div>
+
+<!-- ===================== OPEN FILE MODAL ===================== -->
+<div class="modal-scrim" id="openScrim">
+  <div class="modal">
+    <div class="modal-head"><b>Open</b><button class="icon-btn" id="openClose" style="font-size:18px;">&times;</button></div>
+    <div class="modal-body" id="openList"></div>
+  </div>
+</div>
+
+<!-- ===================== ABOUT MODAL ===================== -->
+<div class="modal-scrim" id="aboutScrim">
+  <div class="modal">
+    <div class="modal-head"><b>About</b><button class="icon-btn" id="aboutClose" style="font-size:18px;">&times;</button></div>
+    <div class="modal-body" style="padding:20px;">
+      <div style="display:flex;gap:14px;align-items:center;margin-bottom:14px;">
+        <div class="logo" style="width:48px;height:48px;font-size:18px;border-radius:12px;">M5</div>
+        <div><b style="font-size:16px;">MetaEditor 5 — Android UI</b><div style="color:var(--txt-dim);font-size:12px;">Demo edition • MQL5 syntax</div></div>
+      </div>
+      <p style="font-size:12.5px;line-height:1.6;color:var(--txt-dim);">
+        A faithful mobile UI re-creation of MetaEditor 5 with a working MQL5 code editor,
+        syntax highlighting and <b>simulated</b> compilation. Real <code>.mq5</code> → <code>.ex5</code>
+        compilation requires the official MetaEditor on Windows.
+      </p>
+      <p style="font-size:11px;color:var(--txt-dim);">Built for Cloudflare Workers / Pages.</p>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================================
+   MetaEditor 5 Android — logika aplikasi
+   Komentar dalam Bahasa Indonesia, antarmuka dalam Bahasa Inggris.
+   ========================================================================= */
+
+/* ---------- Template file MQL5 ---------- */
+const TEMPLATES = {
+  expert: `//+------------------------------------------------------------------+
+//|                                                MyExpert.mq5       |
+//|                        Contoh Expert Advisor (EA)                 |
+//+------------------------------------------------------------------+
+#property copyright "Copyright 2026"
+#property link      "https://www.mql5.com"
+#property version   "1.00"
+
+#include <Trade/Trade.mqh>
+
+// Parameter input EA
+input double Lots      = 0.10;   // Ukuran lot
+input int    StopLoss  = 200;    // SL dalam points
+input int    TakeProfit= 400;    // TP dalam points
+input int    MA_Period = 14;     // Periode moving average
+
+CTrade trade;
+int    maHandle;
+
+//+------------------------------------------------------------------+
+//| Inisialisasi EA                                                  |
+//+------------------------------------------------------------------+
+int OnInit()
+  {
+   maHandle = iMA(_Symbol, _Period, MA_Period, 0, MODE_SMA, PRICE_CLOSE);
+   if(maHandle == INVALID_HANDLE)
+      return(INIT_FAILED);
+   Print("EA berhasil di-inisialisasi");
+   return(INIT_SUCCEEDED);
+  }
+
+//+------------------------------------------------------------------+
+//| Saat EA dilepas dari chart                                       |
+//+------------------------------------------------------------------+
+void OnDeinit(const int reason)
+  {
+   IndicatorRelease(maHandle);
+  }
+
+//+------------------------------------------------------------------+
+//| Dijalankan setiap tick harga                                    |
+//+------------------------------------------------------------------+
+void OnTick()
+  {
+   double ma[];
+   if(CopyBuffer(maHandle, 0, 0, 2, ma) < 2)
+      return;
+
+   double ask = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+   double bid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+
+   // Contoh logika sederhana: beli bila harga di atas MA
+   if(PositionsTotal() == 0 && ask > ma[0])
+     {
+      trade.Buy(Lots, _Symbol, ask, ask - StopLoss*_Point, ask + TakeProfit*_Point);
+     }
+  }
+//+------------------------------------------------------------------+`,
+
+  indicator: `//+------------------------------------------------------------------+
+//|                                             MyIndicator.mq5       |
+//+------------------------------------------------------------------+
+#property copyright "Copyright 2026"
+#property version   "1.00"
+#property indicator_chart_window
+#property indicator_buffers 1
+#property indicator_plots   1
+#property indicator_label1  "MyLine"
+#property indicator_type1   DRAW_LINE
+#property indicator_color1  clrDodgerBlue
+
+input int Period = 14;          // Periode
+double    Buffer[];
+
+//+------------------------------------------------------------------+
+int OnInit()
+  {
+   SetIndexBuffer(0, Buffer, INDICATOR_DATA);
+   return(INIT_SUCCEEDED);
+  }
+//+------------------------------------------------------------------+
+int OnCalculate(const int rates_total,
+                const int prev_calculated,
+                const datetime &time[],
+                const double &open[],
+                const double &high[],
+                const double &low[],
+                const double &close[],
+                const long &tick_volume[],
+                const long &volume[],
+                const int &spread[])
+  {
+   for(int i = prev_calculated; i < rates_total; i++)
+      Buffer[i] = close[i];
+   return(rates_total);
+  }
+//+------------------------------------------------------------------+`,
+
+  script: `//+------------------------------------------------------------------+
+//|                                                 MyScript.mq5      |
+//+------------------------------------------------------------------+
+#property copyright "Copyright 2026"
+#property version   "1.00"
+#property script_show_inputs
+
+input string Message = "Hello, MQL5!";   // Pesan
+
+//+------------------------------------------------------------------+
+void OnStart()
+  {
+   Print(Message);
+   Alert(Message);
+  }
+//+------------------------------------------------------------------+`,
+
+  empty: `//+------------------------------------------------------------------+\n//|  New file                                                        |\n//+------------------------------------------------------------------+\n\n`
+};
+
+/* ---------- Kamus MQL5 untuk highlight ---------- */
+const MQL5_KEYWORDS = ['input','sinput','extern','const','static','virtual','override','final',
+ 'if','else','for','while','do','switch','case','default','break','continue','return','new','delete',
+ 'class','struct','enum','union','public','private','protected','template','typename','operator',
+ 'this','sizeof','true','false','NULL'];
+const MQL5_TYPES = ['void','bool','char','uchar','short','ushort','int','uint','long','ulong',
+ 'float','double','string','datetime','color','enum','struct','class','MqlTick','MqlRates',
+ 'CTrade','CSymbolInfo','CPositionInfo','CAccountInfo'];
+const MQL5_FUNCS = ['OnInit','OnDeinit','OnTick','OnStart','OnCalculate','OnTimer','OnChartEvent',
+ 'Print','Alert','Comment','CopyBuffer','SymbolInfoDouble','PositionsTotal','OrderSend','iMA',
+ 'IndicatorRelease','SetIndexBuffer','WebRequest','StringFormat','ArraySize','ArrayResize'];
+
+/* ---------- State aplikasi ---------- */
+const state = {
+  files: [],          // {name, type, content, modified}
+  active: 0,
+  options: {
+    dark:true, restore:true, gutter:true, indent:true, hl:true,
+    optim:true, warnErr:false, debug:false,
+    eaAlgo:false, eaDisableOnAccount:true, eaDisableOnProfile:true,
+    eaDisableOnSymbol:false, eaDll:false, eaWebReq:false,
+    webUrls:['https://www.mql5.com']
+  }
+};
+
+/* ---------- Util DOM ---------- */
+const $ = (s)=>document.querySelector(s);
+const $$ = (s)=>document.querySelectorAll(s);
+const esc = (s)=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+function toast(msg){
+  const t=$('#toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+/* ---------- Persistensi (localStorage) ---------- */
+function persist(){
+  try{
+    localStorage.setItem('me5_options', JSON.stringify(state.options));
+    localStorage.setItem('me5_files', JSON.stringify(state.files));
+    localStorage.setItem('me5_active', String(state.active));
+  }catch(e){}
+}
+function restore(){
+  try{
+    const o=JSON.parse(localStorage.getItem('me5_options')||'null');
+    if(o) Object.assign(state.options,o);
+    const f=JSON.parse(localStorage.getItem('me5_files')||'null');
+    if(f&&f.length){ state.files=f; state.active=parseInt(localStorage.getItem('me5_active')||'0')||0; }
+  }catch(e){}
+}
+
+/* ---------- Syntax highlight (regex sederhana) ---------- */
+function highlightCode(code){
+  if(!state.options.hl) return esc(code);
+  // tokenisasi: komentar, string, preprocessor, angka, kata
+  const re = /(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')|(^[ \t]*#[^\n]*)|(\b\d+\.?\d*\b)|([A-Za-z_]\w*)/gm;
+  let out=''; let last=0; let m;
+  while((m=re.exec(code))){
+    out += esc(code.slice(last,m.index));
+    last = re.lastIndex;
+    if(m[1]) out += '<span class="t-com">'+esc(m[1])+'</span>';
+    else if(m[2]) out += '<span class="t-str">'+esc(m[2])+'</span>';
+    else if(m[3]) out += '<span class="t-pre">'+esc(m[3])+'</span>';
+    else if(m[4]) out += '<span class="t-num">'+esc(m[4])+'</span>';
+    else if(m[5]){
+      const w=m[5];
+      if(MQL5_KEYWORDS.includes(w)) out+='<span class="t-kw">'+w+'</span>';
+      else if(MQL5_TYPES.includes(w)) out+='<span class="t-type">'+w+'</span>';
+      else if(MQL5_FUNCS.includes(w)) out+='<span class="t-fn">'+w+'</span>';
+      else out+=esc(w);
+    }
+  }
+  out += esc(code.slice(last));
+  return out;
+}
+
+/* ---------- Render editor ---------- */
+function curFile(){ return state.files[state.active]; }
+
+function renderEditor(){
+  const f=curFile();
+  const input=$('#input'), hl=$('#highlight'), gutter=$('#gutter');
+  if(!f){ input.value=''; hl.innerHTML=''; gutter.innerHTML=''; return; }
+  input.value=f.content;
+  syncHighlight();
+}
+function syncHighlight(){
+  const input=$('#input'), hl=$('#highlight'), gutter=$('#gutter');
+  const code=input.value;
+  hl.innerHTML=highlightCode(code)+'\n';
+  // gutter
+  const lines=code.split('\n').length;
+  if(state.options.gutter){
+    gutter.style.display='block';
+    let g=''; for(let i=1;i<=lines;i++) g+='<div>'+i+'</div>';
+    gutter.innerHTML=g;
+  } else gutter.style.display='none';
+}
+function syncScroll(){
+  const input=$('#input'), hl=$('#highlight'), gutter=$('#gutter');
+  hl.style.transform=`translate(${-input.scrollLeft}px,${-input.scrollTop}px)`;
+}
+
+/* ---------- Render tabs ---------- */
+function renderTabs(){
+  const bar=$('#tabbar'); bar.innerHTML='';
+  state.files.forEach((f,i)=>{
+    const tab=document.createElement('div');
+    tab.className='tab'+(i===state.active?' active':'')+(f.modified?' modified':'');
+    tab.innerHTML=`<span class="dot"></span><span>${esc(f.name)}</span><span class="x" data-close="${i}">&times;</span>`;
+    tab.addEventListener('click',(e)=>{
+      if(e.target.dataset.close!==undefined){ closeFile(+e.target.dataset.close); e.stopPropagation(); return; }
+      state.active=i; renderTabs(); renderEditor(); updateStatus();
+    });
+    bar.appendChild(tab);
+  });
+  $('#subTitle').textContent = curFile()? curFile().name : 'Android Edition';
+}
+function closeFile(i){
+  state.files.splice(i,1);
+  if(state.active>=state.files.length) state.active=Math.max(0,state.files.length-1);
+  if(state.files.length===0){ newFile('empty','Untitled.mq5'); }
+  renderTabs(); renderEditor(); updateStatus(); persist();
+}
+function newFile(type, name){
+  const ext = type==='empty'?'mq5':'mq5';
+  let base = name || ({expert:'Expert',indicator:'Indicator',script:'Script',empty:'Untitled'}[type]||'File');
+  if(!name) base += state.files.length? state.files.length:'';
+  const fname = name || base + '.' + ext;
+  state.files.push({name:fname,type,content:TEMPLATES[type]||TEMPLATES.empty,modified:false});
+  state.active=state.files.length-1;
+  renderTabs(); renderEditor(); updateStatus(); persist();
+}
+
+/* ---------- Status bar ---------- */
+function updateStatus(){
+  const input=$('#input');
+  const pos=input.selectionStart;
+  const before=input.value.slice(0,pos);
+  const ln=before.split('\n').length;
+  const col=pos-before.lastIndexOf('\n');
+  $('#stPos').textContent=`Ln ${ln}, Col ${col}`;
+}
+
+/* =========================================================================
+   COMPILER (SIMULASI)
+   Memvalidasi sintaks dasar MQL5 dan menampilkan log seperti MetaEditor.
+   ========================================================================= */
+function log(sev,text,line){
+  const body=$('#toolboxBody');
+  const map={err:'sev-err',warn:'sev-warn',info:'sev-info',ok:'sev-ok'};
+  const label={err:'error',warn:'warning',info:'info',ok:'success'};
+  const div=document.createElement('div');
+  div.className='log-line';
+  div.innerHTML=`<span class="sev ${map[sev]}">${label[sev]}</span>`+
+    `<span>${line?('('+line+') '):''}${esc(text)}</span>`;
+  body.appendChild(div); body.scrollTop=body.scrollHeight;
+}
+function openToolbox(){ $('#toolbox').classList.add('open'); }
+
+function validateMQL5(code){
+  // Validasi dasar: kurung, titik koma, fungsi event wajib, dll.
+  const errors=[]; const warnings=[];
+  const lines=code.split('\n');
+
+  // 1) Balance kurung kurawal & bulat
+  let curly=0, paren=0;
+  let inBlockComment=false;
+  lines.forEach((raw,idx)=>{
+    let line=raw;
+    // buang komentar baris
+    line=line.replace(/\/\/.*$/,'');
+    for(let i=0;i<line.length;i++){
+      const c=line[i], n=line[i+1];
+      if(inBlockComment){ if(c==='*'&&n==='/'){inBlockComment=false;i++;} continue; }
+      if(c==='/'&&n==='*'){inBlockComment=true;i++;continue;}
+      if(c==='{')curly++; if(c==='}')curly--;
+      if(c==='(')paren++; if(c===')')paren--;
+      if(curly<0){errors.push({line:idx+1,msg:"unbalanced '}' — missing opening brace"});curly=0;}
+    }
+  });
+  if(curly>0) errors.push({line:lines.length,msg:`'}' expected — ${curly} unbalanced brace(s)`});
+  if(paren!==0) warnings.push({line:lines.length,msg:`parenthesis '()' may be unbalanced`});
+
+  // 2) Deteksi tipe file via #property
+  const isEA = /OnTick\s*\(/.test(code);
+  const isInd = /#property\s+indicator/.test(code) || /OnCalculate\s*\(/.test(code);
+  const isScript = /OnStart\s*\(/.test(code);
+  if(!isEA && !isInd && !isScript)
+    warnings.push({line:1,msg:"no event handler found (OnTick/OnCalculate/OnStart)"});
+
+  // 3) Titik koma yang hilang (heuristik ringan)
+  lines.forEach((raw,idx)=>{
+    const line=raw.replace(/\/\/.*$/,'').trim();
+    if(!line) return;
+    if(/^(input|extern|sinput)\b/.test(line) && !line.endsWith(';') && !line.endsWith(','))
+      errors.push({line:idx+1,msg:"';' expected at end of declaration"});
+  });
+
+  // 4) #include yang umum
+  if(isEA && /CTrade/.test(code) && !/#include\s*<Trade\/Trade\.mqh>/.test(code))
+    warnings.push({line:1,msg:"'CTrade' used but <Trade/Trade.mqh> not included"});
+
+  // 5) WebRequest tanpa izin
+  if(/WebRequest\s*\(/.test(code) && !state.options.eaWebReq)
+    warnings.push({line:1,msg:"WebRequest() used but 'Allow WebRequest for listed URL' is disabled in Options"});
+
+  return {errors,warnings,kind:isEA?'expert':isInd?'indicator':isScript?'script':'program'};
+}
+
+function doCompile(checkOnly){
+  const f=curFile(); if(!f) return;
+  $('#toolboxBody').innerHTML='';
+  openToolbox();
+  $('#stStat').textContent='Compiling…';
+  const t0=performance.now();
+  log('info',`Compiling '${f.name}'…`);
+  const res=validateMQL5(f.content);
+
+  // emulasi sedikit delay
+  setTimeout(()=>{
+    res.warnings.forEach(w=>log('warn',w.msg,w.line));
+    res.errors.forEach(e=>log('err',e.msg,e.line));
+
+    const ms=Math.round(performance.now()-t0)+ (40+Math.floor(Math.random()*180));
+    const errCnt=res.errors.length;
+    const warnCnt=res.warnings.length;
+    const fail = errCnt>0 || (state.options.warnErr && warnCnt>0);
+
+    log('info','—'.repeat(40));
+    if(checkOnly){
+      log(fail?'err':'ok', fail
+        ? `Syntax check FAILED: ${errCnt} error(s), ${warnCnt} warning(s)`
+        : `Syntax OK: 0 error(s), ${warnCnt} warning(s)`);
+      $('#stStat').textContent= fail?'Check failed':'Check OK';
+    } else if(fail){
+      log('err',`${f.name} — ${errCnt} error(s), ${warnCnt} warning(s)`);
+      log('err','Compilation FAILED — no .ex5 produced');
+      $('#stStat').textContent='Compile failed';
+      toast('Compilation failed: '+errCnt+' error(s)');
+    } else {
+      const ex5=f.name.replace(/\.mq5$/,'.ex5');
+      const size=(2+Math.random()*30).toFixed(1);
+      log('ok',`'${ex5}' created — ${res.kind}, ${warnCnt} warning(s), ${ms} msec`);
+      if(state.options.optim) log('info','optimization: O2 enabled');
+      if(state.options.debug) log('info','debug symbols: included');
+      log('ok',`0 error(s), ${warnCnt} warning(s)`);
+      $('#stStat').textContent='Compiled successfully';
+      toast('Compiled → '+ex5);
+    }
+    persist();
+  },420);
+}
+
+/* =========================================================================
+   OPTIONS DIALOG
+   ========================================================================= */
+function openOptions(forceEA){
+  // muat nilai state ke kontrol
+  const o=state.options;
+  $('#optDark').checked=o.dark; $('#optRestore').checked=o.restore;
+  $('#optGutter').checked=o.gutter; $('#optIndent').checked=o.indent; $('#optHl').checked=o.hl;
+  $('#optOptim').checked=o.optim; $('#optWarnErr').checked=o.warnErr; $('#optDebug').checked=o.debug;
+  $('#eaAlgo').checked=o.eaAlgo;
+  $('#eaDisableOnAccount').checked=o.eaDisableOnAccount;
+  $('#eaDisableOnProfile').checked=o.eaDisableOnProfile;
+  $('#eaDisableOnSymbol').checked=o.eaDisableOnSymbol;
+  $('#eaDll').checked=o.eaDll;
+  $('#eaWebReq').checked=o.eaWebReq;
+  renderUrlList();
+  updateUrlSection();
+  if(forceEA) selectOptPane('ea');
+  $('#optScrim').classList.add('show');
+}
+function selectOptPane(p){
+  $$('.opt-tab').forEach(t=>t.classList.toggle('active',t.dataset.pane===p));
+  $$('.opt-pane').forEach(t=>t.classList.toggle('active',t.dataset.pane===p));
+}
+function updateUrlSection(){
+  const on=$('#eaWebReq').checked;
+  const sec=$('#urlSection');
+  sec.style.opacity=on?'1':'.45';
+  sec.style.pointerEvents=on?'auto':'none';
+}
+function renderUrlList(){
+  const list=$('#urlList');
+  if(state.options.webUrls.length===0){ list.innerHTML='<div class="empty">No URLs added yet.</div>'; return; }
+  list.innerHTML='';
+  state.options.webUrls.forEach((u,i)=>{
+    const row=document.createElement('div');
+    row.className='url-item';
+    row.innerHTML=`<span class="u">${esc(u)}</span><span class="del" data-i="${i}">&#128465;</span>`;
+    row.querySelector('.del').addEventListener('click',()=>{
+      state.options.webUrls.splice(i,1); renderUrlList();
+    });
+    list.appendChild(row);
+  });
+}
+function saveOptions(){
+  const o=state.options;
+  o.dark=$('#optDark').checked; o.restore=$('#optRestore').checked;
+  o.gutter=$('#optGutter').checked; o.indent=$('#optIndent').checked; o.hl=$('#optHl').checked;
+  o.optim=$('#optOptim').checked; o.warnErr=$('#optWarnErr').checked; o.debug=$('#optDebug').checked;
+  o.eaAlgo=$('#eaAlgo').checked;
+  o.eaDisableOnAccount=$('#eaDisableOnAccount').checked;
+  o.eaDisableOnProfile=$('#eaDisableOnProfile').checked;
+  o.eaDisableOnSymbol=$('#eaDisableOnSymbol').checked;
+  o.eaDll=$('#eaDll').checked;
+  o.eaWebReq=$('#eaWebReq').checked;
+  $('#optScrim').classList.remove('show');
+  applyOptions();
+  persist();
+  toast('Options saved');
+}
+function applyOptions(){
+  syncHighlight();
+  document.documentElement.style.colorScheme = state.options.dark?'dark':'light';
+}
+
+/* =========================================================================
+   EVENT WIRING
+   ========================================================================= */
+function init(){
+  restore();
+  if(state.files.length===0){ newFile('expert','MyExpert.mq5'); }
+  renderTabs(); renderEditor(); updateStatus(); applyOptions();
+  buildKbdToolbar();
+  buildNewList(); buildOpenList();
+
+  const input=$('#input');
+  input.addEventListener('input',()=>{
+    const f=curFile(); if(f){ f.content=input.value; if(!f.modified){f.modified=true; renderTabs();} }
+    syncHighlight(); updateStatus(); persist();
+  });
+  input.addEventListener('scroll',syncScroll);
+  input.addEventListener('keyup',updateStatus);
+  input.addEventListener('click',updateStatus);
+  input.addEventListener('keydown',(e)=>{
+    // Tab → 3 spasi (gaya MetaEditor)
+    if(e.key==='Tab'){ e.preventDefault(); insertText('   '); }
+    // auto-indent
+    if(e.key==='Enter' && state.options.indent){
+      const s=input.selectionStart;
+      const line=input.value.slice(0,s).split('\n').pop();
+      const indent=(line.match(/^\s*/)||[''])[0];
+      if(indent){ setTimeout(()=>insertText(indent),0); }
+    }
+  });
+
+  // top bar
+  $('#btnMenu').onclick=openDrawer;
+  $('#btnSave').onclick=()=>{ const f=curFile(); if(f){f.modified=false; renderTabs(); persist(); toast('Saved '+f.name);} };
+  $('#btnFind').onclick=toggleFind;
+  $('#findClose').onclick=toggleFind;
+  $('#findInput').addEventListener('input',doFind);
+  $('#btnOverflow').onclick=()=>openOptions(false);
+
+  // bottom nav
+  $('#navNew').onclick=()=>$('#newScrim').classList.add('show');
+  $('#navOpen').onclick=()=>$('#openScrim').classList.add('show');
+  $('#navCompile').onclick=()=>doCompile(false);
+  $('#navCheck').onclick=()=>doCompile(true);
+  $('#navOptions').onclick=()=>openOptions(false);
+
+  // toolbox
+  $('#closeToolbox').onclick=()=>$('#toolbox').classList.remove('open');
+  $('#clearLog').onclick=()=>$('#toolboxBody').innerHTML='';
+
+  // drawer
+  $('#scrim').onclick=closeDrawer;
+  $$('.drawer .menu-item').forEach(it=>{
+    it.onclick=()=>{ closeDrawer(); handleAct(it.dataset.act); };
+  });
+
+  // options modal
+  $('#optClose').onclick=$('#optCancel').onclick=()=>$('#optScrim').classList.remove('show');
+  $('#optOk').onclick=saveOptions;
+  $$('.opt-tab').forEach(t=>t.onclick=()=>selectOptPane(t.dataset.pane));
+  $('#eaWebReq').addEventListener('change',updateUrlSection);
+  $('#urlAdd').onclick=()=>{
+    const v=$('#urlInput').value.trim();
+    if(!v) return;
+    let url=v; if(!/^https?:\/\//i.test(url)) url='https://'+url;
+    state.options.webUrls.push(url); $('#urlInput').value=''; renderUrlList();
+  };
+  $('#urlInput').addEventListener('keydown',e=>{ if(e.key==='Enter') $('#urlAdd').click(); });
+
+  // misc modals
+  $('#newClose').onclick=()=>$('#newScrim').classList.remove('show');
+  $('#openClose').onclick=()=>$('#openScrim').classList.remove('show');
+  $('#aboutClose').onclick=()=>$('#aboutScrim').classList.remove('show');
+
+  // tutup modal saat klik scrim
+  $$('.modal-scrim').forEach(m=>m.addEventListener('click',e=>{ if(e.target===m) m.classList.remove('show'); }));
+}
+
+function insertText(t){
+  const input=$('#input');
+  const s=input.selectionStart, e=input.selectionEnd;
+  input.value=input.value.slice(0,s)+t+input.value.slice(e);
+  input.selectionStart=input.selectionEnd=s+t.length;
+  const f=curFile(); if(f) f.content=input.value;
+  syncHighlight(); updateStatus();
+}
+
+function buildKbdToolbar(){
+  const keys=['{','}','(',')','[',']',';','=','"','<','>','//','#','&&','||','->','_'];
+  const bar=$('#kbdToolbar'); bar.innerHTML='';
+  keys.forEach(k=>{
+    const b=document.createElement('button'); b.textContent=k;
+    b.onmousedown=b.ontouchstart=(e)=>{ e.preventDefault(); insertText(k); };
+    bar.appendChild(b);
+  });
+}
+
+function buildNewList(){
+  const items=[
+    {t:'expert',ic:'🤖',n:'Expert Advisor (EA)',d:'Automated trading program (.mq5)'},
+    {t:'indicator',ic:'📈',n:'Custom Indicator',d:'Chart indicator (.mq5)'},
+    {t:'script',ic:'📜',n:'Script',d:'One-shot script (.mq5)'},
+    {t:'empty',ic:'📄',n:'Empty file',d:'Blank .mq5 source'},
+  ];
+  const host=$('#newList'); host.innerHTML='';
+  items.forEach(it=>{
+    const row=document.createElement('div'); row.className='file-item';
+    row.innerHTML=`<span class="ic">${it.ic}</span><span class="nm"><b>${it.n}</b><small>${it.d}</small></span>`;
+    row.onclick=()=>{ newFile(it.t); $('#newScrim').classList.remove('show'); toast('Created '+curFile().name); };
+    host.appendChild(row);
+  });
+}
+function buildOpenList(){
+  const samples=[
+    {t:'expert',n:'MyExpert.mq5',d:'Expert • 1.7 KB'},
+    {t:'indicator',n:'MyIndicator.mq5',d:'Indicator • 1.1 KB'},
+    {t:'script',n:'MyScript.mq5',d:'Script • 0.4 KB'},
+  ];
+  const host=$('#openList'); host.innerHTML='';
+  samples.forEach(it=>{
+    const row=document.createElement('div'); row.className='file-item';
+    row.innerHTML=`<span class="ic">📄</span><span class="nm"><b>${it.n}</b><small>${it.d}</small></span>`;
+    row.onclick=()=>{
+      state.files.push({name:it.n,type:it.t,content:TEMPLATES[it.t],modified:false});
+      state.active=state.files.length-1;
+      renderTabs(); renderEditor(); updateStatus(); persist();
+      $('#openScrim').classList.remove('show'); toast('Opened '+it.n);
+    };
+    host.appendChild(row);
+  });
+}
+
+function handleAct(act){
+  switch(act){
+    case 'new': $('#newScrim').classList.add('show'); break;
+    case 'open': $('#openScrim').classList.add('show'); break;
+    case 'save': $('#btnSave').click(); break;
+    case 'compile': doCompile(false); break;
+    case 'check': doCompile(true); break;
+    case 'options': openOptions(false); break;
+    case 'ea-options': openOptions(true); break;
+    case 'about': $('#aboutScrim').classList.add('show'); break;
+  }
+}
+
+function openDrawer(){ $('#drawer').classList.add('show'); $('#scrim').classList.add('show'); }
+function closeDrawer(){ $('#drawer').classList.remove('show'); $('#scrim').classList.remove('show'); }
+
+function toggleFind(){
+  const fb=$('#findbar'); fb.classList.toggle('show');
+  if(fb.classList.contains('show')) $('#findInput').focus();
+}
+function doFind(){
+  const q=$('#findInput').value; if(!q) return;
+  const input=$('#input'); const idx=input.value.toLowerCase().indexOf(q.toLowerCase());
+  if(idx>=0){ input.focus(); input.setSelectionRange(idx,idx+q.length); updateStatus(); }
+}
+
+document.addEventListener('DOMContentLoaded',init);
+</script>
+</body>
+</html>
