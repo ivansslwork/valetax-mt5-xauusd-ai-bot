@@ -1,0 +1,24 @@
+{
+  "name": "valetax-mt5-xauusd-ai-bot",
+  "version": "1.1.0",
+  "private": true,
+  "description": "Valetax MT5 XAUUSD AI bot: mobile UI, Vercel API, MetaEditor-style EA editor, and MQL5 EA scaffold.",
+  "type": "module",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "node scripts/build.mjs",
+    "vercel-build": "npm run build",
+    "deploy": "vercel --prod",
+    "vercel:env": "vercel env add APP_TOKEN production",
+    "cf:dev": "wrangler dev",
+    "cf:deploy": "wrangler deploy",
+    "cf:secret": "wrangler secret put APP_TOKEN",
+    "devvars": "node scripts/create-dev-vars.mjs",
+    "check": "node --check api/_lib.js && node --check src/worker.js",
+    "tail": "wrangler tail"
+  },
+  "devDependencies": {
+    "vercel": "^35.2.3",
+    "wrangler": "^4.20.0"
+  }
+}

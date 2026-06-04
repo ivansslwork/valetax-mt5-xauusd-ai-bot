@@ -1,0 +1,21 @@
+name = "valetax-mt5-ai-bot"
+main = "src/worker.js"
+compatibility_date = "2025-06-01"
+
+# Static mobile UI assets. Deploy with: npm run deploy
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+# Cloudflare Workers AI binding. Enable Workers AI in your Cloudflare account.
+[ai]
+binding = "AI"
+
+[vars]
+# Use a secret for production instead:
+#   npm run cf:secret
+# APP_TOKEN in [vars] is only a local/demo fallback.
+APP_TOKEN = "change-this-token"
+AI_MODEL = "@cf/meta/llama-3.1-8b-instruct"
+DEFAULT_MAX_RISK_PERCENT = "1"
+DEFAULT_MIN_CONFIDENCE = "65"
