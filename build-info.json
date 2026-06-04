@@ -1,0 +1,21 @@
+{
+  "app": "valetax-mt5-xauusd-ai-bot",
+  "target": "vercel",
+  "builtAt": "2026-06-04T10:02:38.064Z",
+  "node": "v20.20.2",
+  "files": {
+    "ui": "/index.html",
+    "editor": "/metaeditor.html",
+    "ea": "/ValetaxCloudflareAIBot.mq5",
+    "compilePowerShell": "/compile-ea.ps1",
+    "compileBatch": "/compile-ea.bat"
+  },
+  "api": [
+    "/api/health",
+    "/api/quote",
+    "/api/analyze",
+    "/api/signal",
+    "/api/prompt",
+    "/api/agents"
+  ]
+}
